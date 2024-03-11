@@ -1,0 +1,87 @@
+{% extends 'quotes/base.html' %}
+{% load extract_authors %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-8">
+        {% for quote in quotes %}
+        <div class="quote" itemscope="" itemtype="http://schema.org/CreativeWork">
+            <span class="text" itemprop="text">
+                {{quote.quote}}
+                <span style="float: right;">
+                        {% if user.is_authenticated and quote.user == user %}
+                        <button class="btn btn-secondary" data-quote-id="{{ quote.id }}">DELETE</button>
+                        {% endif %}
+                    </span>
+            </span>
+            <span>by <small class="author" itemprop="author">{{quote.author.fullname}}</small>
+        <a href="/author/{{quote.author.fullname}}">(about)</a>
+        </span>
+            <div class="tags">
+                Tags:
+                {% for tag in quote.tags.all %}
+                <a class="tag" href="/tag/{{tag}}">{{tag}}</a>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% endfor %}
+        <nav>
+            <ul class="pager">
+
+                <li class="previous" class="btn btn-secondary">
+                    <a class="{% if not quotes.has_previous %} disabled {% endif %}"
+                       href="{% if quotes.has_previous %} {% url 'quotes:root_paginate' quotes.previous_page_number %} {% else %} # {% endif %}">
+                        <span aria-hidden="true">←</span> Previous</a>
+                </li>
+
+                <li class="next" class="btn btn-secondary">
+                    <a class="{% if not quotes.has_next %} disabled {% endif %}"
+                       href="{% if quotes.has_next %} {% url 'quotes:root_paginate' quotes.next_page_number %} {% else %} # {% endif %}">
+                        Next <span aria-hidden="true">→</span></a>
+                </li>
+
+            </ul>
+        </nav>
+    </div>
+
+    <div class="col-md-4 tags-box">
+        {% load filters %}
+        <h2>Top Ten tags</h2>
+        {% for tag in top_tags %}
+        <span class="tag-item">
+      <a class="tag" style="font-size: {{ tag.tag_count|times:2 }}px" href="/tag/{{ tag }}">{{ tag }}</a>
+    </span>
+        {% endfor %}
+    </div>
+
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var deleteButtons = document.querySelectorAll('.delete-button');
+
+        deleteButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                var quoteId = this.getAttribute('data-quote-id');
+                if (confirm('Are you sure you want to delete this quote?')) {
+                    fetch(`/delete_quote/${quoteId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = '/';
+                        } else {
+                            console.error('Failed to delete the quote.');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
